@@ -1,6 +1,10 @@
+import 'package:food_delivery_driver/src/actions/auth/index.dart';
+import 'package:food_delivery_driver/src/actions/index.dart';
 import 'package:food_delivery_driver/src/data/auth_api.dart';
+import 'package:food_delivery_driver/src/models/auth/index.dart';
 import 'package:food_delivery_driver/src/models/index.dart';
 import 'package:redux_epics/redux_epics.dart';
+import 'package:rxdart/rxdart.dart';
 
 class AuthEpics{
   const AuthEpics({required AuthApi api}): _api = api;
@@ -8,8 +12,24 @@ class AuthEpics{
   final AuthApi _api;
 
   Epic<AppState> get epics => combineEpics(<Epic<AppState>>[
-
+    TypedEpic<AppState, InitializeApp$>(_initializeApp),
+    TypedEpic<AppState, Login$>(_login),
   ]);
 
+  Stream<AppAction> _login(Stream<Login$> actions, EpicStore<AppState> store) {
+    return actions //
+        .flatMap((Login$ action) => Stream<Login$>.value(action)
+        .asyncMap((Login$ action) => _api.login(email: action.email, password: action.password))
+        .map((EmployeeUser user) => Login.successful(user))
+        .onErrorReturnWith((dynamic error) => Login.error(error))
+        .doOnData(action.response));
+  }
 
+  Stream<AppAction> _initializeApp(Stream<InitializeApp$> actions, EpicStore<AppState> store) {
+    return actions //
+        .flatMap((InitializeApp$ action) => Stream<InitializeApp$>.value(action)
+        .asyncMap((InitializeApp$ action) => _api.initializeApp())
+        .map((EmployeeUser user) => InitializeApp.successful(user))
+        .onErrorReturnWith((dynamic error) => InitializeApp.error(error)));
+  }
 }
