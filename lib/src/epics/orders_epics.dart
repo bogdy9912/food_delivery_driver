@@ -11,8 +11,10 @@ class OrdersEpics {
 
   final OrdersApi _api;
 
-  Epic<AppState> get epics =>
-      combineEpics(<Epic<AppState>>[TypedEpic<AppState, GetDeliveryOrders$>(_getDeliveryOrders)]);
+  Epic<AppState> get epics => combineEpics(<Epic<AppState>>[
+        TypedEpic<AppState, GetDeliveryOrders$>(_getDeliveryOrders),
+        TypedEpic<AppState, UpdateStatusOrder$>(_updateStatusOrder),
+      ]);
 
   Stream<AppAction> _getDeliveryOrders(Stream<GetDeliveryOrders$> actions, EpicStore<AppState> store) {
     return actions //
@@ -26,6 +28,16 @@ class OrdersEpics {
               return GetDeliveryOrders.successful(mapOfResult);
             })
             .onErrorReturnWith((dynamic error) => GetDeliveryOrders.error(error))
+            .doOnData(action.response));
+  }
+
+  Stream<AppAction> _updateStatusOrder(Stream<UpdateStatusOrder$> actions, EpicStore<AppState> store) {
+    return actions //
+        .flatMap((UpdateStatusOrder$ action) => Stream<UpdateStatusOrder$>.value(action)
+            .asyncMap((UpdateStatusOrder$ action) => _api.updateStatusOrder(
+                companyId: store.state.auth.user!.companyId, orderId: action.orderId, newStatus: action.newStatus))
+            .mapTo(UpdateStatusOrder.successful(orderId: action.orderId, newStatus: action.newStatus))
+            .onErrorReturnWith((dynamic error) => UpdateStatusOrder.error(error))
             .doOnData(action.response));
   }
 }
